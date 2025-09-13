@@ -14,14 +14,20 @@
     body {
       margin: 0;
       padding: 0;
-      font-family: cambria;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       min-height: 100vh;
-      color: rgb(0, 0, 0);
-      opacity: 100;
-      animation: fadeIn 5s ease forwards;
+      color: rgb(255, 255, 255);
+      opacity: 0;
+      animation: fadeIn 2s ease forwards;
+      overflow-x: hidden;
     }
     @keyframes fadeIn {
       to { opacity: 1; }
+    }
+    
+    /* Smooth scrolling */
+    html {
+      scroll-behavior: smooth;
     }
 
     video.bg-video {
@@ -31,45 +37,118 @@
       height: 100%;
       object-fit: cover;
       z-index: -1;
+      filter: brightness(0.6) contrast(1.2);
+    }
+    
+    /* Video overlay gradient */
+    .video-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(45deg, 
+        rgba(19, 19, 165, 0.4) 0%, 
+        rgba(0, 100, 255, 0.3) 50%, 
+        rgba(19, 19, 165, 0.4) 100%);
+      z-index: -1;
+      animation: gradientShift 8s ease-in-out infinite;
+    }
+    
+    @keyframes gradientShift {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 0.6; }
     }
 
     /* Layout container */
     .container {
       text-align: center;
-      padding: 20px;
-      max-width: 90%;
-      margin: 50px auto;
-      background: rgb(19, 19, 165,0.7);
+      padding: 40px;
+      max-width: 500px;
+      margin: 80px auto 40px;
+      background: linear-gradient(135deg, 
+        rgba(19, 19, 165, 0.8) 0%, 
+        rgba(50, 50, 200, 0.9) 50%, 
+        rgba(19, 19, 165, 0.8) 100%);
       color: white;
-      border-radius: 10px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      margin-top: 50px;
-      box-shadow: 0 10px 30px 5px rgba(0, 0, 0, 0.5);
+      border-radius: 20px;
+      backdrop-filter: blur(25px);
+      -webkit-backdrop-filter: blur(25px);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 
+        0 20px 40px rgba(0, 0, 0, 0.3),
+        0 0 100px rgba(19, 19, 165, 0.3),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+      transform: translateY(0);
+      transition: all 0.3s ease;
+      animation: containerFloat 6s ease-in-out infinite;
+    }
+    
+    .container:hover {
+      transform: translateY(-10px);
+      box-shadow: 
+        0 30px 60px rgba(0, 0, 0, 0.4),
+        0 0 120px rgba(19, 19, 165, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+    }
+    
+    @keyframes containerFloat {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
     }
 
     /* Connect button top-right */
     .top-right {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 100;
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      display: flex;
+      gap: 10px;
     }
 
     button {
-      padding: 10px 20px;
+      padding: 12px 24px;
       border: none;
-      border-radius: 5px;
-      background: #080808;
-      color: rgb(243, 237, 237);
-      font-weight: bold;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
       cursor: pointer;
-      transition: transform 0.2s, background 0.2s;
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
+    
+    button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    button:hover::before {
+      left: 100%;
+    }
+    
     button:hover {
-      transform: scale(1.05);
-      background: #66e0ff;
+      transform: translateY(-2px) scale(1.02);
+      background: linear-gradient(135deg, #2a2a5e 0%, #26335e 100%);
+      box-shadow: 0 8px 25px rgba(102, 224, 255, 0.3);
+      border-color: rgba(102, 224, 255, 0.4);
+    }
+    
+    button:active {
+      transform: translateY(0) scale(0.98);
+      transition: all 0.1s;
     }
     @media(max-width: 480px){
       h1{font-size: 1.5em;}
@@ -84,35 +163,128 @@
       display: block;
     }
     .container input, .container button {
-      margin: 10px auto;
+      margin: 15px auto;
       display: block;
+      width: 90%;
+      max-width: 400px;
+    }
+    
+    .container input {
+      padding: 15px 20px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+      font-size: 16px;
+      backdrop-filter: blur(10px);
+      transition: all 0.3s ease;
+      outline: none;
+    }
+    
+    .container input::placeholder {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    
+    .container input:focus {
+      border-color: #66e0ff;
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 20px rgba(102, 224, 255, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .container h1 {
+      font-size: 2.2em;
+      margin-bottom: 20px;
+      background: linear-gradient(45deg, #ffffff, #66e0ff, #ffffff);
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: titleShine 3s ease-in-out infinite;
+      text-shadow: 0 0 30px rgba(102, 224, 255, 0.5);
+    }
+    
+    @keyframes titleShine {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    
+    .container h3 {
+      font-size: 1.4em;
+      margin: 25px 0 15px;
+      color: #66e0ff;
+      text-shadow: 0 0 10px rgba(102, 224, 255, 0.3);
+    }
+    
+    .container hr {
+      border: none;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, #66e0ff, transparent);
+      margin: 30px 0;
+      animation: hrGlow 2s ease-in-out infinite;
+    }
+    
+    @keyframes hrGlow {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+    
+    .wallet-info {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 15px;
+      border-radius: 10px;
+      margin: 20px 0;
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
     /* Popup notification */
     .popup {
       position: fixed;
-      bottom: 20px;
+      bottom: 30px;
       left: 50%;
-      transform: translateX(-50%);
-      background: rgba(6, 22, 107, 0.8);
-      padding: 15px 20px;
-      border-radius: 5px;
-      color: rgb(228, 226, 236);
+      transform: translateX(-50%) translateY(100px);
+      background: linear-gradient(135deg, rgba(6, 22, 107, 0.95), rgba(19, 19, 165, 0.95));
+      padding: 20px 30px;
+      border-radius: 15px;
+      color: #ffffff;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 15px;
       opacity: 0;
       pointer-events: none;
-      transition: opacity 0.5s ease;
-      z-index: 1000;
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 2000;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      max-width: 400px;
     }
+    
     .popup img {
-      width: 12px;
-      height: 12px;
+      width: 20px;
+      height: 20px;
       display: inline-block;
+      filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.3));
     }
+    
     .popup.show {
       opacity: 1;
       pointer-events: auto;
+      transform: translateX(-50%) translateY(0);
+    }
+    
+    /* Loading animation */
+    .loading {
+      display: inline-block;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      border-top-color: #66e0ff;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -121,6 +293,7 @@
     <video class="bg-video" autoplay muted loop>
     <source src="video_2025-08-13_19-34-01.mp4" type="video/mp4">
   </video>
+  <div class="video-overlay"></div>
 
   <div class="top-right">
     <button id="connectBtn">Connect Wallet</button>
@@ -128,19 +301,23 @@
   </div>
 
   <div class="container">
-    <h1>Tip a Creator SHARDEUM (Divineaweb3)</h1>
-    <p id="walletAddress">Not connected</p>
-    <p id="walletBalance" style="color: #66e0ff;">Balance: -</p>
+    <h1>🚀 Tip a Creator</h1>
+    <div class="wallet-info">
+      <p id="walletAddress">🔗 Not connected</p>
+      <p id="walletBalance" style="color: #66e0ff;">💰 Balance: -</p>
+    </div>
     <hr>
-    <h3>Send Tip</h3>
-    <input type="text" id="creatorAddress" placeholder="Creator wallet address" size="40">
-    <input type="text" id="amount" placeholder="Amount in SHM (e.g., 0.001)" pattern="[0-9]+(\.[0-9]+)?" title="Enter a valid number">
-    <button id="tipBtn">Send Tip</button>
+    <h3>💸 Send Tip</h3>
+    <input type="text" id="creatorAddress" placeholder="🎯 Creator wallet address" size="40">
+    <input type="text" id="amount" placeholder="💎 Amount in SHM (e.g., 0.001)" pattern="[0-9]+(\.[0-9]+)?" title="Enter a valid number">
+    <button id="tipBtn">🚀 Send Tip</button>
     <hr>
-    <h3>Check Total Tips</h3>
-    <input type="text" id="checkAddress" placeholder="Creator wallet address" size="40">
-    <button id="checkBtn">Check</button>
-    <p id="totalTips">Total Tips: -</p>
+    <h3>📊 Check Total Tips</h3>
+    <input type="text" id="checkAddress" placeholder="🔍 Creator wallet address" size="40">
+    <button id="checkBtn">📈 Check Tips</button>
+    <div class="wallet-info">
+      <p id="totalTips">📊 Total Tips: -</p>
+    </div>
   </div>
 
   <!-- Popup Notification -->
@@ -195,10 +372,10 @@
         try {
           const balance = await signer.getBalance();
           const balanceInSHM = ethers.utils.formatEther(balance);
-          walletBalancep.innerText = `Balance: ${balanceInSHM} SHM`;
+          walletBalancep.innerText = `💰 Balance: ${balanceInSHM} SHM`;
         } catch (err) {
           console.error("Failed to get balance:", err);
-          walletBalancep.innerText = "Balance: Error";
+          walletBalancep.innerText = "💰 Balance: Error";
         }
       }
     }
@@ -245,7 +422,7 @@
         contract = new ethers.Contract(contractAddress, contractABI, signer);
 
         const addr = await signer.getAddress();
-        walletAddressp.innerText = "Connected: " + addr;
+        walletAddressp.innerText = "🟢 Connected: " + addr;
         connectBtn.style.display = "none";
         disconnectBtn.style.display = "inline-block";
         
@@ -274,8 +451,8 @@
       signer = null;
       contract = null;
       provider = null;
-      walletAddressp.innerText = "Not connected";
-      walletBalancep.innerText = "Balance: -";
+      walletAddressp.innerText = "🔗 Not connected";
+      walletBalancep.innerText = "💰 Balance: -";
       connectBtn.style.display = "inline-block";
       disconnectBtn.style.display = "none";
       alert("Wallet disconnected successfully.");
@@ -476,7 +653,7 @@
       try {
         const total = await contract.totalTips(creator);
         document.getElementById("totalTips").innerText =
-          "Total Tips: " + ethers.utils.formatEther(total) + " SHM";
+          "📊 Total Tips: " + ethers.utils.formatEther(total) + " SHM";
       } catch (err) {
         console.error(err);
         alert("Failed to fetch total tips. Check console for details.");
@@ -524,7 +701,7 @@
       if (typeof window.ethereum !== "undefined") {
         const accounts = await window.ethereum.request({ method: 'eth_accounts' });
         if (accounts.length > 0) {
-          walletAddressp.innerText = "Connected: " + accounts[0];
+          walletAddressp.innerText = "🟢 Connected: " + accounts[0];
           connectBtn.style.display = "none";
           disconnectBtn.style.display = "inline-block";
           

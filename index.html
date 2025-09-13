@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SHM TIP A CREATOR</title>
+  <!-- Ethers.js -->
+  <script src="ethers.umd.min.js"></script>
+  <script src="abi.js"></script>
+  <script src="config.js"></script>
+
+  <style>
+    /* Body fade-in animation */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: cambria;
+      min-height: 100vh;
+      color: rgb(0, 0, 0);
+      opacity: 100;
+      animation: fadeIn 5s ease forwards;
+    }
+    @keyframes fadeIn {
+      to { opacity: 1; }
+    }
+
+    video.bg-video {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      z-index: -1;
+    }
+
+    /* Layout container */
+    .container {
+      text-align: center;
+      padding: 20px;
+      max-width: 90%;
+      margin: 50px auto;
+      background: rgb(19, 19, 165,0.7);
+      color: white;
+      border-radius: 10px;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      margin-top: 50px;
+      box-shadow: 0 10px 30px 5px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Connect button top-right */
+    .top-right {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 100;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      background: #080808;
+      color: rgb(243, 237, 237);
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, background 0.2s;
+    }
+    button:hover {
+      transform: scale(1.05);
+      background: #66e0ff;
+    }
+    @media(max-width: 480px){
+      h1{font-size: 1.5em;}
+      h3{font-size: 1.2em;}
+      .container{padding: 15px;}
+      button{font-size: 1em;}
+    }
+    input, button{
+      width:90%;
+      margin:10px auto;
+      font-size: 1em;
+      display: block;
+    }
+    .container input, .container button {
+      margin: 10px auto;
+      display: block;
+    }
+    /* Popup notification */
+    .popup {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(6, 22, 107, 0.8);
+      padding: 15px 20px;
+      border-radius: 5px;
+      color: rgb(228, 226, 236);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+      z-index: 1000;
+    }
+    .popup img {
+      width: 12px;
+      height: 12px;
+      display: inline-block;
+    }
+    .popup.show {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  </style>
+</head>
+<body>
+
+    <video class="bg-video" autoplay muted loop>
+    <source src="video_2025-08-13_19-34-01.mp4" type="video/mp4">
+  </video>
+
+  <div class="top-right">
+    <button id="connectBtn">Connect Wallet</button>
+    <button id="disconnectBtn" style="display:none;">Disconnect</button>
+  </div>
+
+  <div class="container">
+    <h1>Tip a Creator SHARDEUM (Divineaweb3)</h1>
+    <p id="walletAddress">Not connected</p>
+    <p id="walletBalance" style="color: #66e0ff;">Balance: -</p>
+    <hr>
+    <h3>Send Tip</h3>
+    <input type="text" id="creatorAddress" placeholder="Creator wallet address" size="40">
+    <input type="text" id="amount" placeholder="Amount in SHM (e.g., 0.001)" pattern="[0-9]+(\.[0-9]+)?" title="Enter a valid number">
+    <button id="tipBtn">Send Tip</button>
+    <hr>
+    <h3>Check Total Tips</h3>
+    <input type="text" id="checkAddress" placeholder="Creator wallet address" size="40">
+    <button id="checkBtn">Check</button>
+    <p id="totalTips">Total Tips: -</p>
+  </div>
+
+  <!-- Popup Notification -->
+  <div id="popup" class="popup">
+    <img id="popupIcon" src="" alt="" />
+    <span id="popupMessage"></span>
+  </div>
+
+  <script>
+    // Debug function to check if everything loaded correctly
+    function debugConnections() {
+      console.log("=== DEBUG INFO ===");
+      console.log("Ethers available:", typeof ethers !== 'undefined' ? 'YES' : 'NO');
+      console.log("Contract ABI available:", typeof contractABI !== 'undefined' ? 'YES' : 'NO');
+      console.log("Config available:", typeof config !== 'undefined' ? 'YES' : 'NO');
+      console.log("MetaMask available:", typeof window.ethereum !== 'undefined' ? 'YES' : 'NO');
+      console.log("Connect button found:", document.getElementById("connectBtn") ? 'YES' : 'NO');
+      if (typeof config !== 'undefined') {
+        console.log("Backend URL:", config.backendUrl);
+        console.log("API Key:", config.apiKey ? 'SET' : 'NOT SET');
+      }
+      console.log("==================");
+    }
+
+    const contractAddress = "0x7Cdd7526195058B38cf2399f822f593a28982114";
+    const unstablenetChainId = "0x1F90";
+    const backendUrl = window.config.backendUrl;
+    const apiKey = window.config.apiKey;
+    const sessionId = Date.now().toString();
+    
+    const unstablenetParams = {
+      chainId: unstablenetChainId,
+      chainName: "Shardeum Unstablenet",
+      nativeCurrency: {
+        name: "Shardeum",
+        symbol: "SHM",
+        decimals: 18
+      },
+      rpcUrls: ["https://api-unstablenet.shardeum.org/"],
+      blockExplorerUrls: ["https://explorer-unstablenet.shardeum.org/"]
+    };
+
+    let provider, signer, contract;
+
+    const connectBtn = document.getElementById("connectBtn");
+    const disconnectBtn = document.getElementById("disconnectBtn");
+    const walletAddressp = document.getElementById("walletAddress");
+    const walletBalancep = document.getElementById("walletBalance");
+    
+    async function updateBalance() {
+      if (signer) {
+        try {
+          const balance = await signer.getBalance();
+          const balanceInSHM = ethers.utils.formatEther(balance);
+          walletBalancep.innerText = `Balance: ${balanceInSHM} SHM`;
+        } catch (err) {
+          console.error("Failed to get balance:", err);
+          walletBalancep.innerText = "Balance: Error";
+        }
+      }
+    }
+
+    async function switchToUnstablenet() {
+      try {
+        await window.ethereum.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: unstablenetChainId }]
+        });
+      } catch (switchError) {
+        if (switchError.code === 4902) {
+          try {
+            await window.ethereum.request({
+              method: 'wallet_addEthereumChain',
+              params: [unstablenetParams]
+            });
+          } catch (addError) {
+            console.error("Failed to add Unstablenet", addError);
+          }
+        } else {
+          console.error("Failed to switch network", switchError);
+        }
+      }
+    }
+
+    async function connectWallet() {
+      console.log("Connect wallet function called");
+      if (typeof window.ethereum === "undefined") {
+        console.error("MetaMask not detected");
+        alert("MetaMask not detected. Please install it from https://metamask.io/");
+        return;
+      }
+      console.log("MetaMask detected, proceeding with connection...");
+      try {
+        const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+        if (currentChainId !== unstablenetChainId) {
+          await switchToUnstablenet();
+        }
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
+
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        signer = provider.getSigner();
+        contract = new ethers.Contract(contractAddress, contractABI, signer);
+
+        const addr = await signer.getAddress();
+        walletAddressp.innerText = "Connected: " + addr;
+        connectBtn.style.display = "none";
+        disconnectBtn.style.display = "inline-block";
+        
+        // Update balance display
+        await updateBalance();
+        
+        // Log wallet connection to backend
+        try {
+          await fetch(`${backendUrl}/api/wallet-connection`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey
+            },
+            body: JSON.stringify({ walletAddress: addr })
+          });
+        } catch (backendErr) {
+          console.error("Failed to log wallet connection:", backendErr);
+        }
+      } catch (err) {
+        alert("Connection failed: " + (err.message || "Unknown error"));
+      }
+    }
+
+    function disconnectWallet() {
+      signer = null;
+      contract = null;
+      provider = null;
+      walletAddressp.innerText = "Not connected";
+      walletBalancep.innerText = "Balance: -";
+      connectBtn.style.display = "inline-block";
+      disconnectBtn.style.display = "none";
+      alert("Wallet disconnected successfully.");
+    }
+
+    // Add event listeners with error handling
+    if (connectBtn) {
+      console.log("Adding click event listener to connect button");
+      connectBtn.addEventListener("click", function(event) {
+        console.log("Connect button clicked");
+        event.preventDefault();
+        connectWallet();
+      });
+    } else {
+      console.error("Connect button not found!");
+    }
+    
+    if (disconnectBtn) {
+      console.log("Adding click event listener to disconnect button");
+      disconnectBtn.addEventListener("click", function(event) {
+        console.log("Disconnect button clicked");
+        event.preventDefault();
+        disconnectWallet();
+      });
+    } else {
+      console.error("Disconnect button not found!");
+    }
+
+    async function sendTip() {
+      try {
+        if (!contract) {
+          alert("Please connect your wallet first.");
+          return;
+        }
+        const creator = document.getElementById("creatorAddress").value.trim();
+        const amount = document.getElementById("amount").value.trim();
+        if (!creator || !amount) {
+          alert("Please enter both creator address and amount.");
+          return;
+        }
+        
+        // Clean and validate amount
+        const cleanAmount = amount.replace(/[^0-9.]/g, ''); // Remove non-numeric chars except decimal
+        const amountNum = parseFloat(cleanAmount);
+        
+        if (isNaN(amountNum) || amountNum <= 0) {
+          alert("Please enter a valid positive number (e.g., 0.001, 1.5, 10)");
+          return;
+        }
+        
+        // Check for too many decimal places (more than 18, which is Wei precision)
+        const decimalPlaces = (cleanAmount.split('.')[1] || '').length;
+        if (decimalPlaces > 18) {
+          alert("Too many decimal places. Maximum 18 decimal places allowed.");
+          return;
+        }
+        
+        console.log(`Original input: "${amount}", Cleaned: "${cleanAmount}", Parsed: ${amountNum}`);
+        
+        // Validate creator address format
+        if (!ethers.utils.isAddress(creator)) {
+          alert("Please enter a valid wallet address.");
+          return;
+        }
+        
+        const userAddress = await signer.getAddress();
+        let transactionId = null;
+        
+        // Check user balance first
+        const balance = await signer.getBalance();
+        const amountInWei = ethers.utils.parseEther(cleanAmount.toString());
+        
+        // Estimate gas for the tip transaction
+        let gasEstimate;
+        try {
+          const estimatedGas = await contract.estimateGas.tip(creator, { value: amountInWei });
+          const gasPrice = await provider.getGasPrice();
+          gasEstimate = estimatedGas.mul(gasPrice);
+          console.log(`Estimated gas: ${ethers.utils.formatEther(gasEstimate)} SHM`);
+        } catch (gasErr) {
+          // Fallback to a smaller estimate
+          gasEstimate = ethers.utils.parseEther("0.0001"); // Much smaller fallback
+          console.log("Using fallback gas estimate:", ethers.utils.formatEther(gasEstimate));
+        }
+        
+        if (balance.lt(amountInWei.add(gasEstimate))) {
+          const balanceInSHM = ethers.utils.formatEther(balance);
+          const gasInSHM = ethers.utils.formatEther(gasEstimate);
+          alert(`Insufficient balance. You have ${balanceInSHM} SHM, but need ${amount} SHM + ${gasInSHM} SHM for gas fees.`);
+          return;
+        }
+        
+        console.log(`Sending ${amount} SHM from ${userAddress} to ${creator}`);
+        console.log(`Balance: ${ethers.utils.formatEther(balance)} SHM`);
+        console.log(`Amount in Wei: ${amountInWei.toString()}`);
+        
+        // Display balance info to user
+        const balanceDisplay = ethers.utils.formatEther(balance);
+        console.log(`Your balance: ${balanceDisplay} SHM`);
+        
+        // Log transaction as pending
+        try {
+          const logResponse = await fetch(`${backendUrl}/api/tip-transaction`, {
+            method: 'POST',
+            headers: { 
+              'Content-Type': 'application/json',
+              'x-api-key': apiKey
+            },
+            body: JSON.stringify({
+              fromWallet: userAddress,
+              toWallet: creator,
+              amount: cleanAmount,
+              amountInWei: amountInWei.toString(),
+              status: 'pending',
+              sessionId: sessionId
+            })
+          });
+          
+          if (!logResponse.ok) {
+            const errorText = await logResponse.text();
+            console.error("Failed to create transaction record. Status:", logResponse.status, "Error:", errorText);
+          } else {
+            const logData = await logResponse.json();
+            transactionId = logData.id;
+            console.log("Transaction logged with ID:", transactionId);
+          }
+        } catch (backendErr) {
+          console.error("Failed to log transaction:", backendErr);
+        }
+        
+        // Send the transaction
+        console.log("Sending transaction...");
+        const tx = await contract.tip(creator, { value: amountInWei });
+        console.log("Transaction sent! Hash:", tx.hash);
+        
+        // Wait for confirmation
+        console.log("Waiting for confirmation...");
+        const receipt = await tx.wait();
+        console.log("Transaction confirmed!", receipt);
+        
+        // Update transaction as completed
+        if (transactionId) {
+          try {
+            console.log(`Updating transaction ${transactionId} as completed with hash ${tx.hash}`);
+            const updateResponse = await fetch(`${backendUrl}/api/tip-transaction/${transactionId}`, {
+              method: 'PATCH',
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+              },
+              body: JSON.stringify({
+                status: 'completed',
+                transactionHash: tx.hash
+              })
+            });
+            
+            if (!updateResponse.ok) {
+              const errorData = await updateResponse.text();
+              console.error("Failed to update transaction status. Response:", errorData);
+            } else {
+              console.log("Transaction status updated successfully");
+            }
+          } catch (backendErr) {
+            console.error("Failed to update transaction status:", backendErr);
+          }
+        } else {
+          console.warn("No transactionId available to update");
+        }
+        
+        showPopup(`Successfully tipped ${cleanAmount} SHM! TX: ${tx.hash}`, "ei_1755166122310-removebg-preview.png", "lightgreen");
+        alert(`Successfully tipped ${cleanAmount} SHM to ${creator}!\n\nTransaction Hash: ${tx.hash}\n\nView on Explorer: https://explorer-unstablenet.shardeum.org/tx/${tx.hash}`);
+        
+        // Update balance display after transaction
+        await updateBalance();
+        
+      } catch (err) {
+        console.error("Transaction error:", err);
+        if (err.code === 'INSUFFICIENT_FUNDS') {
+          alert("Insufficient funds. Please check your SHM balance.");
+        } else if (err.message && err.message.includes('user rejected')) {
+          alert("Transaction cancelled by user.");
+        } else {
+          alert("Transaction failed: " + (err.message || "Unknown error"));
+        }
+      }
+    }
+
+    async function checkTotalTips() {
+      if (!contract) {
+        alert("Please connect your wallet first.");
+        return;
+      }
+      const creator = document.getElementById("checkAddress").value.trim();
+      if (!creator) {
+        alert("Please enter a creator address.");
+        return;
+      }
+      try {
+        const total = await contract.totalTips(creator);
+        document.getElementById("totalTips").innerText =
+          "Total Tips: " + ethers.utils.formatEther(total) + " SHM";
+      } catch (err) {
+        console.error(err);
+        alert("Failed to fetch total tips. Check console for details.");
+      }
+    }
+
+    // Add click event listeners for tip buttons
+    const tipBtn = document.getElementById("tipBtn");
+    const checkBtn = document.getElementById("checkBtn");
+    
+    if (tipBtn) {
+      tipBtn.addEventListener("click", sendTip);
+      console.log("Added click event listener to tip button");
+    } else {
+      console.error("Tip button not found!");
+    }
+    
+    if (checkBtn) {
+      checkBtn.addEventListener("click", checkTotalTips);
+      console.log("Added click event listener to check button");
+    } else {
+      console.error("Check button not found!");
+    }
+
+    function showPopup(message, iconpath, textColor = "black") {
+      const popup = document.getElementById("popup");
+      const popupIcon = document.getElementById("popupIcon");
+      const popupMessage = document.getElementById("popupMessage");
+
+      popupMessage.textContent = message;
+      popupMessage.style.color = textColor;
+      popupIcon.src = iconpath;
+      popup.classList.add("show");
+
+      setTimeout(() => {
+        popup.classList.remove("show");
+        popupIcon.src = "";
+      }, 3000);
+    }
+
+    window.addEventListener("load", async () => {
+      console.log("Page loaded, running debug checks...");
+      debugConnections();
+      
+      if (typeof window.ethereum !== "undefined") {
+        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+        if (accounts.length > 0) {
+          walletAddressp.innerText = "Connected: " + accounts[0];
+          connectBtn.style.display = "none";
+          disconnectBtn.style.display = "inline-block";
+          
+          // Re-initialize provider and contract for already connected wallet
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          
+          // Update balance display
+          await updateBalance();
+          
+          // Log auto-connection
+          try {
+            await fetch(`${backendUrl}/api/wallet-connection`, {
+              method: 'POST',
+              headers: { 
+                'Content-Type': 'application/json',
+                'x-api-key': apiKey
+              },
+              body: JSON.stringify({ walletAddress: accounts[0] })
+            });
+          } catch (backendErr) {
+            console.error("Failed to log wallet connection:", backendErr);
+          }
+        }
+      }
+    });
+  </script>
+
+</body>
+</html>
+
+
+

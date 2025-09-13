@@ -1,0 +1,88 @@
+/* Reset default margins */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Body fade-in animation */
+body {
+  font-family: Arial, sans-serif;
+  background: linear-gradient(to bottom right, #004aad, #00d4ff);
+  min-height: 100vh;
+  color: rgb(0, 0, 0);
+  opacity: 0;
+  animation: fadeIn 1s ease forwards;
+}
+
+@keyframes fadeIn {
+  to { opacity: 1; }
+}
+
+/* Background video settings */
+video.bg-video {
+  position: fixed;
+  top: 0; 
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -1;
+}
+
+/* Layout container */
+.container {
+  text-align: center;
+  padding: 20px;
+  max-width: 600px;
+  margin: auto;
+  background: rgba(6, 2, 241, 0.1);
+  color: white
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  margin-top: 50px;
+}
+
+/* Connect wallet button at top right */
+.top-right {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+}
+
+button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 5px;
+  background: #00d4ff;
+  color: black;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s, background 0.2s;
+}
+
+button:hover {
+  transform: scale(1.05);
+  background: #66e0ff;
+}
+
+/* Popup notification */
+.popup {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  padding: 15px 20px;
+  border-radius: 5px;
+  color: white;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 1000;
+}
+
+.popup.show {
+  opacity: 1;
+  pointer-events: auto;
+}

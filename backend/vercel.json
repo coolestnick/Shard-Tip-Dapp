@@ -11,11 +11,5 @@
       "src": "/(.*)",
       "dest": "/server.js"
     }
-  ],
-  "env": {
-    "MONGODB_URI": "@mongodb_uri",
-    "API_KEY": "@api_key",
-    "ALLOWED_ORIGINS": "@allowed_origins",
-    "NODE_ENV": "production"
-  }
+  ]
 }

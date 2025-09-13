@@ -698,6 +698,33 @@ app.get('/health', (req, res) => {
   });
 });
 
+// Debug endpoint for MongoDB connection troubleshooting
+app.get('/debug', (req, res) => {
+  res.json({
+    success: true,
+    debug: {
+      mongodbUri: process.env.MONGODB_URI ? 'SET' : 'NOT SET',
+      mongodbUriPreview: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 50) + '...' : 'NOT SET',
+      allowedOrigins: process.env.ALLOWED_ORIGINS || 'NOT SET',
+      apiKey: process.env.API_KEY ? 'SET' : 'NOT SET',
+      nodeEnv: process.env.NODE_ENV || 'NOT SET',
+      mongooseReadyState: mongoose.connection.readyState,
+      mongooseStates: {
+        '0': 'disconnected',
+        '1': 'connected',
+        '2': 'connecting',
+        '3': 'disconnecting'
+      },
+      currentState: {
+        '0': 'disconnected',
+        '1': 'connected',
+        '2': 'connecting',
+        '3': 'disconnecting'
+      }[mongoose.connection.readyState] || 'unknown'
+    }
+  });
+});
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({

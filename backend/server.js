@@ -96,10 +96,28 @@ app.use(helmet());
 // Configure CORS for production
 const corsOptions = {
   origin: function (origin, callback) {
-    const allowedOrigins = process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',') : ['*'];
-    if (!origin || allowedOrigins.indexOf(origin) !== -1 || allowedOrigins.includes('*')) {
+    // Default allowed origins including both frontend deployments
+    const defaultOrigins = [
+      'http://localhost:8080',
+      'http://localhost:8082', 
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://shard-tip-dapp.vercel.app'
+    ];
+    
+    const allowedOrigins = process.env.ALLOWED_ORIGINS 
+      ? process.env.ALLOWED_ORIGINS.split(',').concat(defaultOrigins)
+      : defaultOrigins;
+    
+    // Remove duplicates
+    const uniqueOrigins = [...new Set(allowedOrigins)];
+    
+    console.log('CORS check - Origin:', origin, 'Allowed:', uniqueOrigins);
+    
+    if (!origin || uniqueOrigins.indexOf(origin) !== -1 || uniqueOrigins.includes('*')) {
       callback(null, true);
     } else {
+      console.error('CORS blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },

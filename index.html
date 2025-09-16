@@ -307,6 +307,7 @@
       <p id="walletBalance" style="color: #66e0ff;">💰 Balance: -</p>
       <button id="testBackendBtn" style="font-size: 0.8em; padding: 8px 16px;">🔍 Test Backend</button>
       <button id="clearMetaMaskBtn" style="font-size: 0.8em; padding: 8px 16px; background: orange;">🔄 Clear MetaMask</button>
+      <button id="bypassBtn" style="font-size: 0.8em; padding: 8px 16px; background: red; color: white;">🚨 Force Connect</button>
     </div>
     <hr>
     <h3>💸 Send Tip</h3>
@@ -338,7 +339,6 @@
       console.log("MetaMask available:", typeof window.ethereum !== 'undefined' ? 'YES' : 'NO');
       console.log("Connect button found:", document.getElementById("connectBtn") ? 'YES' : 'NO');
       if (typeof config !== 'undefined') {
-        console.log("Backend URL:", config.backendUrl);
         console.log("API Key:", config.apiKey ? 'SET' : 'NOT SET');
       }
       console.log("==================");
@@ -349,6 +349,93 @@
     const backendUrl = window.config.backendUrl;
     const apiKey = window.config.apiKey;
     const sessionId = Date.now().toString();
+    
+    // BRUTE FORCE: Your specific wallet address - change this to your actual address
+    const BYPASS_WALLET_ADDRESS = "0x742f96c1245c3ab2c8fcc3fb19b3987bd10da55b"; // Replace with your wallet
+    
+    // Helper function to log wallet connections
+    async function logWalletConnection(addr) {
+      try {
+        console.log('Logging wallet connection to backend:', addr);
+        console.log('Backend URL:', backendUrl);
+        console.log('API Key:', apiKey);
+        
+        const response = await fetch(`${backendUrl}/api/wallet-connection`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey
+          },
+          body: JSON.stringify({ walletAddress: addr })
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error('Backend API error:', response.status, errorText);
+          showPopup('⚠️ Warning: Wallet connection not logged to backend', 'ei_1755166153655-removebg-preview.png', 'orange');
+        } else {
+          const data = await response.json();
+          console.log('Wallet connection logged successfully:', data);
+          showPopup('✅ Wallet connected and logged!', 'ei_1755166122310-removebg-preview.png', 'lightgreen');
+        }
+      } catch (backendErr) {
+        console.error("Failed to log wallet connection:", backendErr);
+        console.error("Make sure CORS is enabled and backend is running");
+        showPopup('⚠️ Backend connection failed', 'ei_1755166153655-removebg-preview.png', 'red');
+      }
+    }
+    
+    // BRUTE FORCE: Manual wallet bypass function
+    async function bypassWalletConnection() {
+      console.log("=== MANUAL WALLET BYPASS ACTIVATED ===");
+      try {
+        // Check if MetaMask exists at all
+        if (typeof window.ethereum === "undefined") {
+          alert("MetaMask not found. Please install MetaMask first.");
+          return;
+        }
+        
+        // Try to create provider anyway
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        
+        // Create a dummy signer - this might fail but let's try
+        try {
+          signer = provider.getSigner();
+          
+          // Try to get any address
+          const addr = await signer.getAddress();
+          console.log("Got address from signer:", addr);
+          
+          // Update UI
+          walletAddressp.innerText = "🟢 Connected: " + addr;
+          connectBtn.style.display = "none";
+          disconnectBtn.style.display = "inline-block";
+          
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          await updateBalance();
+          await logWalletConnection(addr);
+          
+          showPopup("✅ Bypass connection successful!", "ei_1755166122310-removebg-preview.png", "lightgreen");
+        } catch (signerErr) {
+          console.error("Signer method failed:", signerErr);
+          
+          // Ultimate fallback: use hardcoded address
+          console.log("Using hardcoded address fallback:", BYPASS_WALLET_ADDRESS);
+          walletAddressp.innerText = "🟡 Simulated: " + BYPASS_WALLET_ADDRESS;
+          connectBtn.style.display = "none";
+          disconnectBtn.style.display = "inline-block";
+          
+          // Log the hardcoded address
+          await logWalletConnection(BYPASS_WALLET_ADDRESS);
+          
+          showPopup("⚠️ Using simulated connection", "ei_1755166153655-removebg-preview.png", "orange");
+          alert("Using simulated wallet connection.\\n\\nAddress: " + BYPASS_WALLET_ADDRESS + "\\n\\nThis is for debugging only. You won't be able to send real transactions.");
+        }
+      } catch (err) {
+        console.error("Bypass failed:", err);
+        alert("Bypass connection failed: " + err.message);
+      }
+    }
     
     const unstablenetParams = {
       chainId: unstablenetChainId,
@@ -410,25 +497,105 @@
     }
 
     async function connectWallet() {
+      console.log("=== BRUTE FORCE WALLET CONNECTION DEBUG ===");
       console.log("Connect wallet function called");
+      
+      // Debug MetaMask availability
+      console.log("window.ethereum exists:", typeof window.ethereum !== "undefined");
+      console.log("window.ethereum object:", window.ethereum);
+      
       if (typeof window.ethereum === "undefined") {
         console.error("MetaMask not detected");
         alert("MetaMask not detected. Please install it from https://metamask.io/");
         return;
       }
-      console.log("MetaMask detected, proceeding with connection...");
+      
+      // Check MetaMask state thoroughly
+      console.log("MetaMask isMetaMask:", window.ethereum.isMetaMask);
+      console.log("MetaMask isConnected:", window.ethereum.isConnected());
+      console.log("MetaMask networkVersion:", window.ethereum.networkVersion);
+      console.log("MetaMask selectedAddress:", window.ethereum.selectedAddress);
+      
+      // Try to get accounts first without requesting
       try {
+        const existingAccounts = await window.ethereum.request({ method: 'eth_accounts' });
+        console.log("Existing accounts:", existingAccounts);
+        
+        if (existingAccounts.length > 0) {
+          console.log("Found existing connection, using it...");
+          
+          // Skip all requests and directly create provider
+          provider = new ethers.providers.Web3Provider(window.ethereum);
+          signer = provider.getSigner();
+          contract = new ethers.Contract(contractAddress, contractABI, signer);
+          
+          const addr = existingAccounts[0]; // Use the existing address directly
+          console.log("Using existing address:", addr);
+          
+          walletAddressp.innerText = "🟢 Connected: " + addr;
+          connectBtn.style.display = "none";
+          disconnectBtn.style.display = "inline-block";
+          
+          // Update balance display
+          await updateBalance();
+          
+          // Log wallet connection to backend
+          await logWalletConnection(addr);
+          
+          showPopup("✅ Connected using existing session!", "ei_1755166122310-removebg-preview.png", "lightgreen");
+          return;
+        }
+      } catch (existingErr) {
+        console.error("Error checking existing accounts:", existingErr);
+      }
+      
+      console.log("No existing connection, requesting new connection...");
+      
+      try {
+        // Check chain first
         const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+        console.log("Current chain ID:", currentChainId);
+        console.log("Target chain ID:", unstablenetChainId);
+        
         if (currentChainId !== unstablenetChainId) {
+          console.log("Wrong network, switching...");
           await switchToUnstablenet();
         }
-        await window.ethereum.request({ method: 'eth_requestAccounts' });
+        
+        // Request accounts with detailed error logging
+        console.log("Requesting account access...");
+        let accounts;
+        try {
+          accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+          console.log("Account request successful:", accounts);
+        } catch (requestError) {
+          console.error("Account request failed with error:", requestError);
+          console.error("Error code:", requestError.code);
+          console.error("Error message:", requestError.message);
+          console.error("Error stack:", requestError.stack);
+          
+          // Try alternative methods
+          if (requestError.code === -32603) {
+            console.log("Trying alternative connection method...");
+            try {
+              // Try enabling
+              accounts = await window.ethereum.enable();
+              console.log("Enable method worked:", accounts);
+            } catch (enableError) {
+              console.error("Enable method also failed:", enableError);
+              throw requestError;
+            }
+          } else {
+            throw requestError;
+          }
+        }
 
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
         contract = new ethers.Contract(contractAddress, contractABI, signer);
 
         const addr = await signer.getAddress();
+        console.log("Successfully connected to address:", addr);
         walletAddressp.innerText = "🟢 Connected: " + addr;
         connectBtn.style.display = "none";
         disconnectBtn.style.display = "inline-block";
@@ -437,34 +604,7 @@
         await updateBalance();
         
         // Log wallet connection to backend
-        try {
-          console.log('Logging wallet connection to backend:', addr);
-          console.log('Backend URL:', backendUrl);
-          console.log('API Key:', apiKey);
-          
-          const response = await fetch(`${backendUrl}/api/wallet-connection`, {
-            method: 'POST',
-            headers: { 
-              'Content-Type': 'application/json',
-              'x-api-key': apiKey
-            },
-            body: JSON.stringify({ walletAddress: addr })
-          });
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Backend API error:', response.status, errorText);
-            showPopup('⚠️ Warning: Wallet connection not logged to backend', 'ei_1755166153655-removebg-preview.png', 'orange');
-          } else {
-            const data = await response.json();
-            console.log('Wallet connection logged successfully:', data);
-            showPopup('✅ Wallet connected and logged!', 'ei_1755166122310-removebg-preview.png', 'lightgreen');
-          }
-        } catch (backendErr) {
-          console.error("Failed to log wallet connection:", backendErr);
-          console.error("Make sure CORS is enabled and backend is running");
-          showPopup('⚠️ Backend connection failed', 'ei_1755166153655-removebg-preview.png', 'red');
-        }
+        await logWalletConnection(addr);
       } catch (err) {
         console.error("Connection error:", err);
         if (err.code === -32002) {
@@ -707,6 +847,7 @@
     const checkBtn = document.getElementById("checkBtn");
     const testBackendBtn = document.getElementById("testBackendBtn");
     const clearMetaMaskBtn = document.getElementById("clearMetaMaskBtn");
+    const bypassBtn = document.getElementById("bypassBtn");
     
     if (tipBtn) {
       tipBtn.addEventListener("click", sendTip);
@@ -785,6 +926,14 @@
         } catch (error) {
           console.error("Error clearing MetaMask:", error);
         }
+      });
+    }
+    
+    // Force connect bypass button
+    if (bypassBtn) {
+      bypassBtn.addEventListener("click", async () => {
+        console.log("Bypass button clicked");
+        await bypassWalletConnection();
       });
     }
 

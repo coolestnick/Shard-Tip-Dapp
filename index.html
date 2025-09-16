@@ -409,66 +409,20 @@
       }
     }
 
-    let isConnecting = false; // Prevent multiple simultaneous connection attempts
-    
     async function connectWallet() {
       console.log("Connect wallet function called");
-      
-      // Prevent multiple connection attempts
-      if (isConnecting) {
-        console.log("Connection already in progress, ignoring request");
-        return;
-      }
-      
       if (typeof window.ethereum === "undefined") {
         console.error("MetaMask not detected");
         alert("MetaMask not detected. Please install it from https://metamask.io/");
         return;
       }
-      
-      // Check if already connected
-      try {
-        const accounts = await window.ethereum.request({ method: 'eth_accounts' });
-        if (accounts.length > 0) {
-          console.log("Already connected to:", accounts[0]);
-          // Just update the UI if already connected
-          provider = new ethers.providers.Web3Provider(window.ethereum);
-          signer = provider.getSigner();
-          contract = new ethers.Contract(contractAddress, contractABI, signer);
-          const addr = await signer.getAddress();
-          walletAddressp.innerText = "🟢 Connected: " + addr;
-          connectBtn.style.display = "none";
-          disconnectBtn.style.display = "inline-block";
-          await updateBalance();
-          showPopup("✅ Already connected!", "ei_1755166122310-removebg-preview.png", "lightgreen");
-          return;
-        }
-      } catch (checkErr) {
-        console.error("Error checking existing connection:", checkErr);
-      }
-      
-      isConnecting = true;
-      connectBtn.disabled = true;
-      connectBtn.innerText = "Connecting...";
-      
       console.log("MetaMask detected, proceeding with connection...");
       try {
         const currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
         if (currentChainId !== unstablenetChainId) {
           await switchToUnstablenet();
         }
-        
-        // Request accounts with error handling for pending requests
-        let accounts;
-        try {
-          accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        } catch (requestErr) {
-          if (requestErr.code === -32002) {
-            alert("Please check MetaMask - there's a pending connection request.\n\nOpen MetaMask and complete or reject the pending request.");
-            throw requestErr;
-          }
-          throw requestErr;
-        }
+        await window.ethereum.request({ method: 'eth_requestAccounts' });
 
         provider = new ethers.providers.Web3Provider(window.ethereum);
         signer = provider.getSigner();
@@ -520,11 +474,6 @@
         } else {
           alert("Connection failed: " + (err.message || "Unknown error"));
         }
-      } finally {
-        // Reset connection state
-        isConnecting = false;
-        connectBtn.disabled = false;
-        connectBtn.innerText = "Connect Wallet";
       }
     }
 
@@ -542,20 +491,9 @@
     // Add event listeners with error handling
     if (connectBtn) {
       console.log("Adding click event listener to connect button");
-      connectBtn.addEventListener("click", async function(event) {
+      connectBtn.addEventListener("click", function(event) {
         console.log("Connect button clicked");
         event.preventDefault();
-        
-        // Clear any pending requests first
-        if (window.ethereum && window.ethereum._metamask && window.ethereum._metamask.isUnlocked) {
-          try {
-            const isUnlocked = await window.ethereum._metamask.isUnlocked();
-            console.log("MetaMask unlocked:", isUnlocked);
-          } catch (e) {
-            console.log("Could not check MetaMask status");
-          }
-        }
-        
         connectWallet();
       });
     } else {
@@ -832,7 +770,6 @@
         console.log("Clearing MetaMask state...");
         try {
           // Reset connection state
-          isConnecting = false;
           connectBtn.disabled = false;
           connectBtn.innerText = "Connect Wallet";
           

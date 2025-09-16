@@ -305,6 +305,7 @@
     <div class="wallet-info">
       <p id="walletAddress">🔗 Not connected</p>
       <p id="walletBalance" style="color: #66e0ff;">💰 Balance: -</p>
+      <button id="testBackendBtn" style="font-size: 0.8em; padding: 8px 16px;">🔍 Test Backend</button>
     </div>
     <hr>
     <h3>💸 Send Tip</h3>
@@ -431,7 +432,11 @@
         
         // Log wallet connection to backend
         try {
-          await fetch(`${backendUrl}/api/wallet-connection`, {
+          console.log('Logging wallet connection to backend:', addr);
+          console.log('Backend URL:', backendUrl);
+          console.log('API Key:', apiKey);
+          
+          const response = await fetch(`${backendUrl}/api/wallet-connection`, {
             method: 'POST',
             headers: { 
               'Content-Type': 'application/json',
@@ -439,8 +444,20 @@
             },
             body: JSON.stringify({ walletAddress: addr })
           });
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Backend API error:', response.status, errorText);
+            showPopup('⚠️ Warning: Wallet connection not logged to backend', 'ei_1755166153655-removebg-preview.png', 'orange');
+          } else {
+            const data = await response.json();
+            console.log('Wallet connection logged successfully:', data);
+            showPopup('✅ Wallet connected and logged!', 'ei_1755166122310-removebg-preview.png', 'lightgreen');
+          }
         } catch (backendErr) {
           console.error("Failed to log wallet connection:", backendErr);
+          console.error("Make sure CORS is enabled and backend is running");
+          showPopup('⚠️ Backend connection failed', 'ei_1755166153655-removebg-preview.png', 'red');
         }
       } catch (err) {
         alert("Connection failed: " + (err.message || "Unknown error"));
@@ -555,6 +572,15 @@
         
         // Log transaction as pending
         try {
+          console.log('Logging transaction to backend:', {
+            fromWallet: userAddress,
+            toWallet: creator,
+            amount: cleanAmount,
+            amountInWei: amountInWei.toString(),
+            status: 'pending',
+            sessionId: sessionId
+          });
+          
           const logResponse = await fetch(`${backendUrl}/api/tip-transaction`, {
             method: 'POST',
             headers: { 
@@ -574,13 +600,16 @@
           if (!logResponse.ok) {
             const errorText = await logResponse.text();
             console.error("Failed to create transaction record. Status:", logResponse.status, "Error:", errorText);
+            showPopup('⚠️ Transaction not logged to backend', 'ei_1755166153655-removebg-preview.png', 'orange');
           } else {
             const logData = await logResponse.json();
-            transactionId = logData.id;
-            console.log("Transaction logged with ID:", transactionId);
+            transactionId = logData.data ? logData.data.id : logData.id;
+            console.log("Transaction logged successfully with ID:", transactionId);
           }
         } catch (backendErr) {
           console.error("Failed to log transaction:", backendErr);
+          console.error("Backend URL:", backendUrl);
+          console.error("Make sure CORS is enabled and backend is running");
         }
         
         // Send the transaction
@@ -663,6 +692,7 @@
     // Add click event listeners for tip buttons
     const tipBtn = document.getElementById("tipBtn");
     const checkBtn = document.getElementById("checkBtn");
+    const testBackendBtn = document.getElementById("testBackendBtn");
     
     if (tipBtn) {
       tipBtn.addEventListener("click", sendTip);
@@ -676,6 +706,48 @@
       console.log("Added click event listener to check button");
     } else {
       console.error("Check button not found!");
+    }
+    
+    // Test backend connection
+    if (testBackendBtn) {
+      testBackendBtn.addEventListener("click", async () => {
+        console.log("Testing backend connection...");
+        console.log("Backend URL:", backendUrl);
+        console.log("API Key:", apiKey);
+        
+        try {
+          // Test health endpoint
+          const healthResponse = await fetch(`${backendUrl}/health`);
+          const healthData = await healthResponse.json();
+          console.log("Health check:", healthData);
+          
+          // Test debug endpoint
+          const debugResponse = await fetch(`${backendUrl}/debug`);
+          const debugData = await debugResponse.json();
+          console.log("Debug info:", debugData);
+          
+          // Test wallet usage endpoint
+          const testAddress = "0x742f96c1245c3ab2c8fcc3fb19b3987bd10da55b";
+          const usageResponse = await fetch(`${backendUrl}/api/wallet-usage/${testAddress}`);
+          const usageData = await usageResponse.json();
+          console.log("Wallet usage test:", usageData);
+          
+          showPopup(`✅ Backend connected! MongoDB: ${healthData.mongodb}`, "ei_1755166122310-removebg-preview.png", "lightgreen");
+          
+          // Show detailed info in alert
+          alert(`Backend Connection Test:\n\n` +
+                `✅ Health: ${healthData.message}\n` +
+                `✅ MongoDB: ${healthData.mongodb}\n` +
+                `✅ Environment: ${healthData.environment}\n` +
+                `✅ API Key: ${debugData.debug?.apiKey || 'NOT SET'}\n` +
+                `✅ CORS Origins: ${debugData.debug?.allowedOrigins || 'NOT SET'}\n\n` +
+                `Test wallet has used dApp: ${usageData.data?.hasUsedDapp || false}`);
+        } catch (error) {
+          console.error("Backend test failed:", error);
+          showPopup("❌ Backend test failed! Check console.", "ei_1755166153655-removebg-preview.png", "red");
+          alert(`Backend Connection Failed!\n\nError: ${error.message}\n\nCheck console for details.`);
+        }
+      });
     }
 
     function showPopup(message, iconpath, textColor = "black") {
@@ -715,7 +787,8 @@
           
           // Log auto-connection
           try {
-            await fetch(`${backendUrl}/api/wallet-connection`, {
+            console.log('Auto-connecting wallet to backend:', accounts[0]);
+            const response = await fetch(`${backendUrl}/api/wallet-connection`, {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
@@ -723,8 +796,16 @@
               },
               body: JSON.stringify({ walletAddress: accounts[0] })
             });
+            
+            if (!response.ok) {
+              const errorText = await response.text();
+              console.error('Backend API error on auto-connect:', response.status, errorText);
+            } else {
+              const data = await response.json();
+              console.log('Auto-connection logged successfully:', data);
+            }
           } catch (backendErr) {
-            console.error("Failed to log wallet connection:", backendErr);
+            console.error("Failed to log auto-connection:", backendErr);
           }
         }
       }
